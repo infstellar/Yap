@@ -1,4 +1,5 @@
 use std::fs;
+use std::env;
 
 use tract_onnx::prelude::*;
 use serde_json::Value;
@@ -42,16 +43,16 @@ impl CRNNModel {
         */
 
         let model = tract_onnx::onnx()
-            .model_for_path("./model_training.onnx").unwrap()
+            .model_for_path(env::var("RUST_PATH").unwrap_or("D:".to_string())+"\\model_training.onnx").unwrap()
             .with_input_fact(0, InferenceFact::dt_shape(f32::datum_type(), tvec!(1, 1, 32, 384))).unwrap()
             .into_optimized().unwrap()
             .into_runnable().unwrap();
         let model5 = tract_onnx::onnx()
-            .model_for_path("./model_training.onnx").unwrap()
+            .model_for_path(env::var("RUST_PATH").unwrap_or("D:".to_string())+"\\model_training.onnx").unwrap()
             .with_input_fact(0, InferenceFact::dt_shape(f32::datum_type(), tvec!(5, 1, 32, 384))).unwrap()
             .into_optimized().unwrap()
             .into_runnable().unwrap();
-        let content = fs::read_to_string("./index_2_word.json").unwrap();
+        let content = fs::read_to_string(env::var("RUST_PATH").unwrap_or("D:".to_string())+"\\index_2_word.json").unwrap();
         let json: Value = serde_json::from_str(content.as_str()).unwrap();
 
 

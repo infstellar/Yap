@@ -20,7 +20,7 @@ use imageproc::contours;
 use imageproc::contrast::adaptive_threshold;
 use serde_json;
 use enigo::*;
-use log::{info, warn};
+use log::{info, warn, error};
 use enigo::Coordinate;
 use enigo::Direction;
 
@@ -275,63 +275,63 @@ impl Pickupper {
         let botton_click_y =
             (self.config.info.tp_botton_pos.top + self.config.info.tp_botton_pos.bottom) / 2 + self.config.info.top;
         let click_lock = self.config.click_tp.clone();
-        thread::spawn(move || {
+        // thread::spawn(move || {
             
-            loop {
-                let do_click = *click_lock.lock().unwrap();
+        //     loop {
+        //         let do_click = *click_lock.lock().unwrap();
 
-                let img = rx_tp.recv().unwrap();
-                let img_gray = grayscale(&img);
+        //         let img = rx_tp.recv().unwrap();
+        //         let img_gray = grayscale(&img);
 
-                let roi_bin = adaptive_threshold(&img_gray, 41);
-                let contours: Vec<contours::Contour<u32>> = imageproc::contours::find_contours(&roi_bin);
-                let mut no_father_cnt = 0;
-                let mut best_match = 0.;
+        //         let roi_bin = adaptive_threshold(&img_gray, 41);
+        //         let contours: Vec<contours::Contour<u32>> = imageproc::contours::find_contours(&roi_bin);
+        //         let mut no_father_cnt = 0;
+        //         let mut best_match = 0.;
 
-                for contour in &contours {
-                    if contour.parent.is_some() { continue; }
-                    let contour_clone = imageproc::contours::Contour {
-                        points: contour.points.clone(),
-                        border_type: contour.border_type,
-                        parent: contour.parent,
-                    };
+        //         for contour in &contours {
+        //             if contour.parent.is_some() { continue; }
+        //             let contour_clone = imageproc::contours::Contour {
+        //                 points: contour.points.clone(),
+        //                 border_type: contour.border_type,
+        //                 parent: contour.parent,
+        //             };
 
-                    let contour_feat = ContourFeatures::new_tp(
-                        contour_clone,
-                        &img_gray
-                    );
-                    let (cos_simi, _valid) = contour_feat.can_match_tp(&botton_feat, 0.999);
-                    if _valid {
-                        // info!("{} {}, {}", contour_feat.area_ratio, contour_feat.bbox_wh_ratio, cos_simi);
-                        // info!("{} {} {}", contour_feat.bbox_area_avg_pixel, contour_feat.contour_points_avg_pixel, contour_feat.contour_len2_area_ratio);
-                        // info!("{:?}", contour_feat.to_feature_vec_tp());
-                        no_father_cnt += 1;
-                        if cos_simi > best_match {
-                            best_match = cos_simi;
-                        }
-                    }
+        //             let contour_feat = ContourFeatures::new_tp(
+        //                 contour_clone,
+        //                 &img_gray
+        //             );
+        //             let (cos_simi, _valid) = contour_feat.can_match_tp(&botton_feat, 0.999);
+        //             if _valid {
+        //                 // info!("{} {}, {}", contour_feat.area_ratio, contour_feat.bbox_wh_ratio, cos_simi);
+        //                 // info!("{} {} {}", contour_feat.bbox_area_avg_pixel, contour_feat.contour_points_avg_pixel, contour_feat.contour_len2_area_ratio);
+        //                 // info!("{:?}", contour_feat.to_feature_vec_tp());
+        //                 no_father_cnt += 1;
+        //                 if cos_simi > best_match {
+        //                     best_match = cos_simi;
+        //                 }
+        //             }
 
-                } 
-                // info!("{} {}, {} {} {}", botton_feat[0], botton_feat[1], botton_feat[2], botton_feat[3], botton_feat[4]);
-                // info!("{:?}", botton_feat);
+        //         } 
+        //         // info!("{} {}, {} {} {}", botton_feat[0], botton_feat[1], botton_feat[2], botton_feat[3], botton_feat[4]);
+        //         // info!("{:?}", botton_feat);
                 
-                // info!("no_father_cnt: {}", no_father_cnt);
-                // info!("tp button click with simi: {}", best_match);
-                if no_father_cnt != 1 {
-                    continue;
-                }
-                if best_match > 0.7 && do_click {
-                    info!("tp button click with simi: {}", best_match);
-                    // move to click
-                    enigo_tp.move_mouse(botton_click_x as i32, botton_click_y as i32, Coordinate::Abs).unwrap();
-                    sleep(25);
+        //         // info!("no_father_cnt: {}", no_father_cnt);
+        //         // info!("tp button click with simi: {}", best_match);
+        //         if no_father_cnt != 1 {
+        //             continue;
+        //         }
+        //         if best_match > 0.7 && do_click {
+        //             info!("tp button click with simi: {}", best_match);
+        //             // move to click
+        //             enigo_tp.move_mouse(botton_click_x as i32, botton_click_y as i32, Coordinate::Abs).unwrap();
+        //             sleep(25);
                     
-                    enigo_tp.button(Button::Left, Direction::Click).unwrap();
-                    // sleep(500);
-                }
+        //             enigo_tp.button(Button::Left, Direction::Click).unwrap();
+        //             // sleep(500);
+        //         }
 
-            }
-        });
+        //     }
+        // });
 
         let dump = self.config.dump;
         let dump_path = self.config.dump_path.clone();
@@ -750,6 +750,7 @@ impl Pickupper {
         }
 
         info!("拾起动作: {:?}", ops);
+        error!("ITEM_PICKUPED: {}", self.last_pickup_name);
         if !do_pk {
             return;
         }
@@ -774,4 +775,6 @@ impl Pickupper {
     }
     
 }
+
+unsafe impl Send for Pickupper {}
 
